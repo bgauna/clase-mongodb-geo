@@ -1,0 +1,25 @@
+{
+  "name": "observatorio-temperaturas-urbanas",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Laboratorio de MongoDB y georreferenciación con Electron y datos sintéticos de Posadas.",
+  "main": "src/main.js",
+  "engines": { "node": ">=22.14.0" },
+  "scripts": {
+    "build": "node scripts/build.js",
+    "start": "npm run build && electron .",
+    "seed": "node scripts/seed.js",
+    "test": "node --test test/validation.test.js test/seed.test.js",
+    "test:integration": "node --test test/database.integration.test.js",
+    "test:electron": "npm run build && electron scripts/smoke-electron.js"
+  },
+  "dependencies": {
+    "leaflet": "1.9.4",
+    "mongodb": "7.7.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "4.3.3",
+    "electron": "45.0.0",
+    "tailwindcss": "4.3.3"
+  }
+}

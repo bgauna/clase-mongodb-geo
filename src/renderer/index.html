@@ -1,0 +1,681 @@
+<!doctype html>
+<html lang="es-AR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://tile.openstreetmap.org; connect-src 'none'; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'"
+    />
+    <title>Observatorio de Temperaturas Urbanas</title>
+    <link rel="stylesheet" href="vendor/leaflet/leaflet.css" />
+    <link rel="stylesheet" href="tailwind.css" />
+    <link rel="stylesheet" href="styles.css" />
+    <script defer src="vendor/leaflet/leaflet.js"></script>
+    <script defer src="app.js"></script>
+  </head>
+  <body>
+    <svg
+      class="icon-definitions"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+    >
+      <defs>
+        <symbol id="i-grid" viewBox="0 0 24 24">
+          <rect x="3" y="3" width="7" height="7" rx="1.5" />
+          <rect x="14" y="3" width="7" height="7" rx="1.5" />
+          <rect x="3" y="14" width="7" height="7" rx="1.5" />
+          <rect x="14" y="14" width="7" height="7" rx="1.5" />
+        </symbol>
+        <symbol id="i-pin" viewBox="0 0 24 24">
+          <path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z" />
+          <circle cx="12" cy="10" r="2.5" />
+        </symbol>
+        <symbol id="i-database" viewBox="0 0 24 24">
+          <ellipse cx="12" cy="5" rx="8" ry="3" />
+          <path d="M4 5v7c0 4 16 4 16 0V5M4 12v7c0 4 16 4 16 0v-7" />
+        </symbol>
+        <symbol id="i-code" viewBox="0 0 24 24">
+          <path d="m8 5-6 7 6 7m8-14 6 7-6 7m-3-16-2 18" />
+        </symbol>
+        <symbol id="i-plus" viewBox="0 0 24 24">
+          <path d="M12 5v14M5 12h14" />
+        </symbol>
+        <symbol id="i-arrow" viewBox="0 0 24 24">
+          <path d="M5 12h14m-5-5 5 5-5 5" />
+        </symbol>
+        <symbol id="i-thermo" viewBox="0 0 24 24">
+          <path d="M9 14.5V5a3 3 0 0 1 6 0v9.5a5 5 0 1 1-6 0Z" />
+          <path d="M12 8v10m0 0h.01" />
+        </symbol>
+        <symbol id="i-edit" viewBox="0 0 24 24">
+          <path d="m16 3 5 5-12 12-6 1 1-6Z M13 6l5 5" />
+        </symbol>
+        <symbol id="i-trash" viewBox="0 0 24 24">
+          <path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7m4-7v7" />
+        </symbol>
+        <symbol id="i-refresh" viewBox="0 0 24 24">
+          <path d="M20 8a9 9 0 1 0 1 7M20 2v6h-6" />
+        </symbol>
+        <symbol id="i-layers" viewBox="0 0 24 24">
+          <path d="m12 3 10 6-10 6L2 9Zm-9 11 9 6 9-6M3 18l9 5 9-5" />
+        </symbol>
+        <symbol id="i-info" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="9" />
+          <path d="M12 11v6m0-10v1" />
+        </symbol>
+        <symbol id="i-close" viewBox="0 0 24 24">
+          <path d="m6 6 12 12M6 18 18 6" />
+        </symbol>
+      </defs>
+    </svg>
+
+    <aside class="sidebar">
+      <a class="brand" href="#panel" aria-label="Inicio del observatorio"
+        ><span class="brand-mark"
+          ><svg class="icon"><use href="#i-thermo" /></svg></span
+        ><span>OTU<span class="brand-sub">OBSERVATORIO URBANO</span></span></a
+      >
+      <div class="workspace-tag">
+        <span class="live-dot"></span> LABORATORIO · POSADAS
+      </div>
+      <p class="nav-caption">EXPLORAR</p>
+      <nav aria-label="Navegación principal">
+        <a class="nav-item active" href="#panel"
+          ><svg class="icon"><use href="#i-grid" /></svg> Vista general
+          <span class="nav-active-dot"></span
+        ></a>
+        <a class="nav-item" href="#map-section"
+          ><svg class="icon"><use href="#i-pin" /></svg> Mapa de estaciones</a
+        >
+        <a class="nav-item" href="#records"
+          ><svg class="icon"><use href="#i-database" /></svg> Mediciones</a
+        >
+        <button class="nav-item" id="open-learning">
+          <svg class="icon"><use href="#i-code" /></svg> Aula MongoDB
+          <span class="small-pill">GUÍA</span>
+        </button>
+      </nav>
+      <div class="sidebar-lesson">
+        <span class="lesson-icon">{ }</span>
+        <p>La ciudad como laboratorio.</p>
+        <span
+          >Explorá documentos, series temporales y consultas
+          geoespaciales.</span
+        ><button id="open-learning-card">
+          Abrir la guía <svg class="icon"><use href="#i-arrow" /></svg>
+        </button>
+      </div>
+      <div class="sidebar-bottom">
+        <div class="mongo-symbol">◈</div>
+        <div>MongoDB local<small>observatorio_temperaturas</small></div>
+        <span id="sidebar-status" class="connection-dot"></span>
+      </div>
+      <div class="sidebar-foot">
+        NoSQL + Georreferenciación <span>v1.0</span>
+      </div>
+    </aside>
+
+    <div class="app-shell" id="panel">
+      <header class="topbar">
+        <div class="breadcrumb">
+          Laboratorio de datos <span>/</span> <strong>Vista general</strong>
+        </div>
+        <div class="topbar-right">
+          <span class="location-label"
+            ><svg class="icon"><use href="#i-pin" /></svg> Posadas, Misiones,
+            AR</span
+          ><span class="course-tag">ENTORNO EDUCATIVO</span>
+        </div>
+      </header>
+      <main>
+        <section class="page-heading flex items-start justify-between gap-4">
+          <div>
+            <div class="eyebrow">TERRITORIO, DATOS Y TEMPERATURA</div>
+            <h1>
+              Observatorio de<br class="mobile-break" />
+              Temperaturas Urbanas<span>.</span>
+            </h1>
+            <p>
+              Una mirada a la temperatura de la ciudad, estación por estación.
+            </p>
+          </div>
+          <button id="new-measurement" class="button button-dark">
+            <svg class="icon"><use href="#i-plus" /></svg> Nueva medición
+          </button>
+        </section>
+
+        <div class="notice flex items-center gap-3">
+          <svg class="icon"><use href="#i-info" /></svg>
+          <p>
+            <strong>Datos sintéticos para aprender.</strong> Las estaciones y
+            sus series iniciales son simuladas. No representan mediciones reales
+            ni una red oficial.
+          </p>
+          <span class="notice-label">SIMULACIÓN</span>
+        </div>
+        <div id="error-banner" class="error-banner" role="status" hidden></div>
+
+        <form id="filter-form" class="filter-bar">
+          <label
+            >Estación<select id="filter-station">
+              <option value="">Todas las estaciones</option>
+            </select></label
+          >
+          <label
+            >Barrio<select id="filter-neighborhood">
+              <option value="">Todos los barrios</option>
+            </select></label
+          >
+          <label
+            >Desde <span class="field-hint">(AR)</span
+            ><input
+              id="filter-from"
+              type="date"
+              min="2000-01-01"
+              max="2100-12-31"
+          /></label>
+          <label
+            >Hasta <span class="field-hint">(AR, inclusive)</span
+            ><input
+              id="filter-to"
+              type="date"
+              min="2000-01-01"
+              max="2100-12-31"
+          /></label>
+          <fieldset class="thermal-filter">
+            <legend>Rango térmico · °C</legend>
+            <input
+              id="filter-min"
+              type="number"
+              min="-30"
+              max="60"
+              step="0.1"
+              placeholder="Mín."
+              aria-label="Temperatura mínima"
+            /><span>—</span
+            ><input
+              id="filter-max"
+              type="number"
+              min="-30"
+              max="60"
+              step="0.1"
+              placeholder="Máx."
+              aria-label="Temperatura máxima"
+            />
+          </fieldset>
+          <button class="button button-teal" type="submit">Aplicar</button
+          ><button
+            class="reset-filter"
+            id="reset-filters"
+            type="button"
+            title="Limpiar filtros"
+            aria-label="Limpiar filtros"
+          >
+            <svg class="icon"><use href="#i-refresh" /></svg>
+          </button>
+        </form>
+        <div class="results-context">
+          <span id="filter-summary">Conectando con la base local…</span
+          ><span id="connection-status" class="status-badge"
+            ><span class="connection-dot"></span> Conectando</span
+          >
+        </div>
+
+        <section
+          class="stats-grid grid grid-cols-3 gap-4"
+          aria-label="Resumen de mediciones filtradas"
+        >
+          <article class="stat-card">
+            <div class="stat-top">
+              <span>Temperatura máxima</span
+              ><span class="stat-symbol warm">↗</span>
+            </div>
+            <div class="stat-value">
+              <span id="stat-max">—</span><span>°C</span>
+            </div>
+            <div class="stat-caption">
+              <span class="tiny-dot warm-bg"></span> Mayor valor del período
+              filtrado
+            </div>
+            <div class="stat-spark warm-spark" aria-hidden="true">
+              ▁ ▂ ▁ ▃ ▂ ▄ ▅ ▃ ▆ ▅ ▆ █
+            </div>
+          </article>
+          <article class="stat-card">
+            <div class="stat-top">
+              <span>Temperatura mínima</span
+              ><span class="stat-symbol cool">↘</span>
+            </div>
+            <div class="stat-value">
+              <span id="stat-min">—</span><span>°C</span>
+            </div>
+            <div class="stat-caption">
+              <span class="tiny-dot cool-bg"></span> Menor valor del período
+              filtrado
+            </div>
+            <div class="stat-spark cool-spark" aria-hidden="true">
+              ▆ ▅ ▆ ▄ ▅ ▃ ▂ ▃ ▁ ▂ ▁ ▁
+            </div>
+          </article>
+          <article class="stat-card">
+            <div class="stat-top">
+              <span>Temperatura promedio</span
+              ><span class="stat-symbol neutral">≈</span>
+            </div>
+            <div class="stat-value">
+              <span id="stat-avg">—</span><span>°C</span>
+            </div>
+            <div class="stat-caption">
+              <span class="tiny-dot neutral-bg"></span> Media de todas las
+              mediciones filtradas
+            </div>
+            <div class="stat-spark neutral-spark" aria-hidden="true">
+              ▂ ▃ ▂ ▄ ▃ ▃ ▄ ▃ ▅ ▄ ▄ ▅
+            </div>
+          </article>
+        </section>
+
+        <section class="exploration-grid" id="map-section">
+          <article class="panel map-panel">
+            <div class="panel-heading">
+              <div>
+                <h2>
+                  <svg class="icon"><use href="#i-pin" /></svg> Distribución de
+                  temperaturas
+                </h2>
+                <p>Última medición por estación dentro de los filtros</p>
+              </div>
+              <button id="fit-map" class="button button-light button-small">
+                <svg class="icon"><use href="#i-layers" /></svg> Ver todas
+              </button>
+            </div>
+            <div class="map-wrap">
+              <div
+                id="map"
+                aria-label="Mapa interactivo de estaciones simuladas en Posadas"
+              ></div>
+              <div class="map-city-tag">
+                <span class="live-dot"></span> POSADAS <span>· MISIONES</span>
+              </div>
+              <div id="map-empty" class="map-empty" hidden>
+                No hay estaciones para estos filtros.
+              </div>
+              <div id="tile-warning" class="tile-warning" hidden>
+                Sin teselas: revisá tu conexión a Internet. Las mediciones
+                siguen disponibles.
+              </div>
+              <button
+                id="near-map"
+                class="map-near-button"
+                title="Consultar documentos cerca del centro actual del mapa"
+              >
+                <svg class="icon"><use href="#i-pin" /></svg> Buscar cerca del
+                centro
+              </button>
+            </div>
+            <div class="map-legend">
+              <span>Temperatura</span
+              ><span><i class="legend-dot cool-bg"></i> &lt; 22°</span
+              ><span><i class="legend-dot mild-bg"></i> 22–28°</span
+              ><span><i class="legend-dot warm-bg"></i> 28–32°</span
+              ><span><i class="legend-dot hot-bg"></i> ≥ 32°</span
+              ><span class="legend-note">Ubicaciones aproximadas</span>
+            </div>
+          </article>
+          <article class="panel stations-panel">
+            <div class="panel-heading">
+              <div>
+                <h2>Estaciones</h2>
+                <p>Seleccioná para explorar su historia</p>
+              </div>
+              <span id="station-count" class="count-pill">0</span>
+            </div>
+            <div id="station-list" class="station-list">
+              <p class="empty-placeholder">Esperando datos de MongoDB…</p>
+            </div>
+            <div class="station-list-foot">
+              <span class="live-dot"></span> Consulta local cada 2 segundos
+            </div>
+          </article>
+        </section>
+
+        <section class="panel chart-panel">
+          <div class="panel-heading">
+            <div>
+              <h2>
+                Evolución de temperatura <span class="outline-pill">°C</span>
+              </h2>
+              <p id="chart-subtitle">
+                Promedio por hora · todas las estaciones · hora de Argentina
+              </p>
+            </div>
+            <div class="chart-key">
+              <span class="chart-key-line"></span
+              ><span id="chart-key-label">Promedio horario</span>
+            </div>
+          </div>
+          <div
+            id="chart"
+            class="chart-container"
+            role="img"
+            aria-label="Gráfico temporal de temperatura"
+          >
+            <p class="empty-placeholder">
+              El gráfico se construirá con las mediciones de MongoDB.
+            </p>
+          </div>
+          <div class="chart-foot">
+            <span id="chart-period">Sin mediciones</span
+            ><span>Hasta 480 puntos recientes · UTC−3</span>
+          </div>
+        </section>
+
+        <section class="panel records-panel" id="records">
+          <div class="panel-heading">
+            <div>
+              <h2>
+                Últimas mediciones
+                <span id="record-count" class="count-pill">0</span>
+              </h2>
+              <p>
+                Documentos de la colección <code>mediciones</code> · ordenados
+                por fecha
+              </p>
+            </div>
+            <button id="inspect-db" class="button button-light button-small">
+              <svg class="icon"><use href="#i-database" /></svg> Ver índices
+            </button>
+          </div>
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Estación</th>
+                  <th>Barrio</th>
+                  <th>Fecha y hora <span>(AR)</span></th>
+                  <th>Temperatura</th>
+                  <th>Humedad</th>
+                  <th>Origen</th>
+                  <th class="align-right">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="measurements-table">
+                <tr>
+                  <td colspan="7" class="empty-cell">Esperando conexión…</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="table-footer">
+            <span id="table-range">0 documentos</span>
+            <div class="pagination">
+              <button
+                id="page-prev"
+                class="button button-light button-small"
+                disabled
+              >
+                ← Anterior</button
+              ><span id="page-label">Página 1</span
+              ><button
+                id="page-next"
+                class="button button-light button-small"
+                disabled
+              >
+                Siguiente →
+              </button>
+            </div>
+          </div>
+        </section>
+        <footer class="page-footer">
+          <span
+            ><svg class="icon"><use href="#i-database" /></svg> MongoDB
+            Community · Electron · Leaflet</span
+          ><span id="last-updated">Última actualización: —</span
+          ><span>Hecho para explorar y aprender.</span>
+        </footer>
+      </main>
+    </div>
+
+    <dialog id="measurement-dialog" class="modal">
+      <form id="measurement-form">
+        <div class="modal-heading">
+          <div>
+            <div class="eyebrow">LABORATORIO DE DOCUMENTOS</div>
+            <h2 id="form-title">Nueva medición</h2>
+          </div>
+          <button
+            type="button"
+            class="icon-button close-dialog"
+            aria-label="Cerrar"
+          >
+            <svg class="icon"><use href="#i-close" /></svg>
+          </button>
+        </div>
+        <p class="modal-intro">
+          Documento sintético. Guardá atributos variables en
+          <code>contexto</code> para explorar el modelo NoSQL.
+        </p>
+        <label class="full-field"
+          >Completar desde una estación<select id="station-template">
+            <option value="">Nueva estación / valores propios</option>
+          </select></label
+        >
+        <div class="form-grid">
+          <label
+            >ID de estación<input
+              name="estacionId"
+              required
+              maxlength="32"
+              pattern="[a-zA-Z0-9_\-]+"
+              placeholder="POS-11" /></label
+          ><label
+            >Nombre de estación<input
+              name="estacion"
+              required
+              maxlength="90"
+              placeholder="Estación del campus" /></label
+          ><label
+            >Barrio<input
+              name="barrio"
+              required
+              maxlength="90"
+              placeholder="Barrio" /></label
+          ><label
+            >Fecha y hora <span class="field-hint">(Argentina, UTC−3)</span
+            ><input
+              name="fecha"
+              type="datetime-local"
+              step="0.001"
+              required
+              min="2000-01-01T00:00"
+              max="2100-12-31T23:59" /></label
+          ><label
+            >Temperatura · °C<input
+              name="temperaturaC"
+              type="number"
+              step="0.1"
+              min="-30"
+              max="60"
+              required /></label
+          ><label
+            >Humedad · %<input
+              name="humedad"
+              type="number"
+              step="0.1"
+              min="0"
+              max="100"
+              required /></label
+          ><label
+            >Longitud <span class="field-hint">(GeoJSON: primer valor)</span
+            ><input
+              name="longitud"
+              type="number"
+              min="-180"
+              max="180"
+              step="any"
+              required /></label
+          ><label
+            >Latitud <span class="field-hint">(GeoJSON: segundo valor)</span
+            ><input
+              name="latitud"
+              type="number"
+              min="-90"
+              max="90"
+              step="any"
+              required
+          /></label>
+        </div>
+        <label class="full-field"
+          >Contexto · documento JSON<textarea
+            name="contexto"
+            rows="5"
+            required
+            spellcheck="false"
+          ></textarea>
+        </label>
+        <div class="form-note">
+          GeoJSON guarda [longitud, latitud]. Leaflet muestra [latitud,
+          longitud].
+        </div>
+        <p id="form-error" class="inline-error" role="alert" hidden></p>
+        <div class="modal-actions">
+          <button type="button" class="button button-light close-dialog">
+            Cancelar</button
+          ><button
+            type="submit"
+            class="button button-dark"
+            id="save-measurement"
+          >
+            Guardar documento
+          </button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="delete-dialog" class="modal modal-small">
+      <div class="modal-heading">
+        <h2>Eliminar medición</h2>
+        <button class="icon-button close-dialog" aria-label="Cerrar">
+          <svg class="icon"><use href="#i-close" /></svg>
+        </button>
+      </div>
+      <p id="delete-description"></p>
+      <p class="modal-intro">
+        Se eliminará solamente este documento de MongoDB. Si era el más
+        reciente, el mapa mostrará el anterior.
+      </p>
+      <p id="delete-error" class="inline-error" hidden role="alert"></p>
+      <div class="modal-actions">
+        <button class="button button-light close-dialog">Cancelar</button
+        ><button id="confirm-delete" class="button button-danger">
+          Eliminar documento
+        </button>
+      </div>
+    </dialog>
+
+    <dialog id="learning-dialog" class="modal modal-wide">
+      <div class="modal-heading">
+        <div>
+          <div class="eyebrow">AULA MONGODB</div>
+          <h2>De los documentos al territorio</h2>
+        </div>
+        <button class="icon-button close-dialog" aria-label="Cerrar">
+          <svg class="icon"><use href="#i-close" /></svg>
+        </button>
+      </div>
+      <p class="modal-intro">
+        Consultas para ejecutar en mongosh o en el shell de Compass. La
+        aplicación usa el driver oficial en el proceso principal de Electron.
+      </p>
+      <div class="learning-tabs" role="group" aria-label="Ejemplos MongoDB">
+        <button data-example="document" class="active">Documento</button
+        ><button data-example="find">find</button
+        ><button data-example="crud">CRUD</button
+        ><button data-example="aggregate">aggregate</button
+        ><button data-example="near">$near</button
+        ><button data-example="architecture">Arquitectura</button>
+      </div>
+      <p id="example-description"></p>
+      <pre id="example-code" tabindex="0"></pre>
+      <div class="learning-note">
+        <svg class="icon"><use href="#i-info" /></svg
+        ><span
+          >Las consultas no se ejecutan automáticamente. Los botones del panel
+          sí consultan MongoDB real mediante IPC.</span
+        >
+      </div>
+    </dialog>
+
+    <dialog id="near-dialog" class="modal">
+      <div class="modal-heading">
+        <div>
+          <div class="eyebrow">CONSULTA GEOESPACIAL</div>
+          <h2>¿Qué hay cerca?</h2>
+        </div>
+        <button class="icon-button close-dialog" aria-label="Cerrar">
+          <svg class="icon"><use href="#i-close" /></svg>
+        </button>
+      </div>
+      <p class="modal-intro">
+        <code>find + $near</code> consulta documentos históricos ordenados por
+        distancia. Requiere el índice <code>2dsphere</code>. Esta búsqueda es
+        independiente de los filtros del panel.
+      </p>
+      <form id="near-form">
+        <div class="form-grid">
+          <label
+            >Longitud<input
+              name="longitud"
+              type="number"
+              step="any"
+              min="-180"
+              max="180"
+              required /></label
+          ><label
+            >Latitud<input
+              name="latitud"
+              type="number"
+              step="any"
+              min="-90"
+              max="90"
+              required /></label
+          ><label
+            >Radio · metros<input
+              name="radio"
+              type="number"
+              value="1500"
+              min="50"
+              max="20000"
+              required /></label
+          ><button
+            id="near-submit"
+            type="submit"
+            class="button button-teal near-submit"
+          >
+            Buscar documentos
+          </button>
+        </div>
+      </form>
+      <p id="near-status" class="modal-intro" role="status">
+        Indicá un radio y ejecutá la consulta.
+      </p>
+      <div id="near-results" class="near-results"></div>
+    </dialog>
+
+    <dialog id="inspect-dialog" class="modal">
+      <div class="modal-heading">
+        <h2>Base de datos e índices</h2>
+        <button class="icon-button close-dialog" aria-label="Cerrar">
+          <svg class="icon"><use href="#i-close" /></svg>
+        </button>
+      </div>
+      <p class="modal-intro">
+        Resultado real de <code>countDocuments()</code> y
+        <code>listIndexes()</code>.
+      </p>
+      <pre id="inspect-result" tabindex="0"></pre>
+    </dialog>
+    <div id="toast" class="toast" role="status" hidden></div>
+  </body>
+</html>
